@@ -7,7 +7,7 @@ import time
 
 class Snake:
     
-    def __init__(self, *, width: int | None=52, heigth: int | None=20, speed: int | None=8) -> None:
+    def __init__(self, *, width: int | None=52, heigth: int | None=20, speed: int | None=3) -> None:
         
         self.key = GetKeyState
 
@@ -24,8 +24,8 @@ class Snake:
         self.showcursor = '\033[?25h'
         self.locate = '\033[{};{}H'
         
-        self.snakehead = "☻"
-        self.snakebody = "○"
+        self.snakehead = "O"
+        self.snakebody = "+"
         self.clear = " "
         self.move = "stand_by"
 
@@ -60,24 +60,29 @@ class Snake:
         print(self.showcursor)
     
     def apple(self, apple) -> None:
-        print(self.locate.format(apple[1] + self.offset[1], apple[0] + self.offset[0]) + "♥", end="")
+        print(self.locate.format(apple[1] + self.offset[1], apple[0] + self.offset[0]) + "@", end="")
     
     
     def snake(self) -> None:
+        if self.body_pos:
+            if len(self.body_pos) > 1:
+                print(self.locate.format(self.body_pos[-2][1] + self.offset[1], self.body_pos[-2][0] + self.offset[0]) + self.snakebody, end="")
+            print(self.locate.format(self.body_pos[0][1] + self.offset[1], self.body_pos[0][0] + self.offset[0]) + self.clear, end="")
         print(self.locate.format(self.head_pos[1] + self.offset[1], self.head_pos[0] + self.offset[0]) + self.snakehead, end="")
 
-    def snaketail(self, body_pos) -> None:
-        print(self.locate.format(body_pos[1] + self.offset[1], body_pos[0] + self.offset[0]) + self.snakebody, end="")
 
-    def cleartrail(self, body_pos) -> None:
-        print(self.locate.format(body_pos[1] + self.offset[1], body_pos[0] + self.offset[0]) + self.clear, end="")
+    def snaketail(self) -> None:
+        self.body_pos.append([self.head_pos[0], self.head_pos[1]])
+        if len(self.body_pos) > self.tail + 2:
+            del self.body_pos[0]
     
     
     def verifybody(self, apple) -> bool:
         if apple in self.body_pos:
             self.generateapple()
         return True
-        
+    
+
     def generateapple(self) -> (list[int, int] | None):
         x_quarter = len(self.wall[0]) // 2
         y_quarter = len(self.wall) // 2
@@ -99,10 +104,8 @@ class Snake:
     
     
     def gameover(self, score) -> None:
-        # self.blankscreen()
         self.cursoron()
         print(self.locate.format(self.offset[1] + (len(self.wall) // 2) - 1, self.offset[0] + (len(self.wall[0]) // 2) - 9) + "<<  GAME  OVER  >>", end="")
-        # print(self.locate.format(self.offset[1] + (len(self.wall) // 2) - 2, self.offset[0] + (len(self.wall[0]) // 2) - 10) + "<< YOUR SCORE: {} >>".format(score), "\n\n")
         print(self.locate.format(self.offset[1] + (len(self.wall)), 1), end="")
         time.sleep(5)
     
@@ -114,7 +117,6 @@ class Snake:
         self.gameboard()
         
         score = 0
-        counter = 0
         
         apple = self.generateapple()
         self.gamescore(score)
@@ -128,34 +130,26 @@ class Snake:
             
             esc = self.key(0x1b)
             
-            self.cleartrail(self.body_pos[counter - self.tail - 1])
-            self.snakebody = "·"; self.snaketail(self.body_pos[counter - self.tail]); self.snakebody = "○"
-            
-            self.body_pos[counter] = [int(self.head_pos[0]), int(self.head_pos[1])]
-            
-            
-            if (right not in self.release) and (self.move != "left"):
-                self.move = "right"
-                self.snakehead = "►"
-                self.rate = 0.1
-                self.velocity = 1
-            
-            if (down not in self.release) and (self.move != "up"):
-                self.move = "down"
-                self.snakehead = "▼"
-                self.rate = 0.2
-                self.velocity = 1
-            
-            if (left not in self.release) and (self.move != "right"):
-                self.move = "left"
-                self.snakehead = "◄"
-                self.rate = 0.1
-                self.velocity = 1
-            
+
             if (up not in self.release) and (self.move != "down"):
                 self.move = "up"
-                self.snakehead = "▲"
-                self.rate = 0.2
+                self.snakehead = "^"
+                self.rate = 2
+                self.velocity = 1
+            elif (down not in self.release) and (self.move != "up"):
+                self.move = "down"
+                self.snakehead = "v"
+                self.rate = 2
+                self.velocity = 1
+            elif (right not in self.release) and (self.move != "left"):
+                self.move = "right"
+                self.snakehead = ">"
+                self.rate = 1
+                self.velocity = 1
+            elif (left not in self.release) and (self.move != "right"):
+                self.move = "left"
+                self.snakehead = "<"
+                self.rate = 1
                 self.velocity = 1
             
             if esc not in self.release:
@@ -163,57 +157,46 @@ class Snake:
             
             
             match self.move:
-                case "right":
-                    self.head_pos[0] += self.velocity
-                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
-                        self.head_pos[0] = 2
-                case "down":
-                    self.head_pos[1] += self.velocity
-                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
-                        self.head_pos[1] = 1
-                case "left":
-                    self.head_pos[0] -= self.velocity
-                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
-                        self.head_pos[0] = len(self.wall[self.head_pos[1]]) - 3
                 case "up":
                     self.head_pos[1] -= self.velocity
                     if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
                         self.head_pos[1] = len(self.wall) - 2
+                case "down":
+                    self.head_pos[1] += self.velocity
+                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
+                        self.head_pos[1] = 1
+                case "right":
+                    self.head_pos[0] += self.velocity
+                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
+                        self.head_pos[0] = 2
+                case "left":
+                    self.head_pos[0] -= self.velocity
+                    if self.wall[self.head_pos[1]][self.head_pos[0]] == 1:
+                        self.head_pos[0] = len(self.wall[self.head_pos[1]]) - 3
             
                 
             if self.velocity == 1:
                 
-                self.snaketail(self.body_pos[counter])
+                self.snaketail()
                 
-                if self.head_pos in self.body_pos[:counter] or self.head_pos in self.body_pos[counter + 1:]:
+                if self.head_pos in self.body_pos[:-1]:
                     self.snakehead = "*"; self.snake()
                     self.gameover(score)
                     return False
                 
-                
                 if self.head_pos == apple:
-                    counter += 1
                     score += 10
                     self.tail += 1
-                    self.body_pos.insert(counter, [int(self.head_pos[0]), int(self.head_pos[1])])
                     apple = self.generateapple()
-                    # self.apple(apple)
                     self.gamescore(score)
             
             self.apple(apple)
             self.snake()
             
-            
-            if (counter >= self.tail) or (self.velocity == 0):
-                counter = 0
-            else:
-                counter += 1
-            
-            
-            time.sleep(self.rate / self.speed)
-
+            time.sleep(self.rate*((11-self.speed)/(60*self.speed)))
 
 if __name__ == "__main__":
+
     snake = Snake(width=52,
                   heigth=18,
                   speed=3)
